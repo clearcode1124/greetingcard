@@ -3,6 +3,7 @@
 catalina*
 *.log
 *.stackdump
+*.png
 
 
 
