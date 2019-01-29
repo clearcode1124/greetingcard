@@ -4,6 +4,7 @@ catalina*
 *.log
 *.stackdump
 *.png
+*.zip
 
 
 

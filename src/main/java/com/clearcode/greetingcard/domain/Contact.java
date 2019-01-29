@@ -9,20 +9,32 @@ import lombok.Data;
 @Data
 public class Contact implements Serializable {
 
-	private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-	@JsonProperty("head_img")
-	private String headImg;
+  @JsonProperty("city")
+  private String city;
 
-	@JsonProperty("nick_name")
-	private String nickName;
+  @JsonProperty("country")
+  private String country;
 
-	@JsonProperty("remark_name")
-	private String remarkName;
+  @JsonProperty("head_img")
+  private String headImg;
 
-	@JsonProperty("user_name")
-	private String userName;
+  @JsonProperty("nick_name")
+  private String nickName;
 
-	@JsonProperty("wxid")
-	private String wxid;
+  @JsonProperty("province")
+  private String province;
+
+  @JsonProperty("remark_name")
+  private String remarkName;
+
+  @JsonProperty("sex")
+  private String sex;
+
+  @JsonProperty("user_name")
+  private String userName;
+
+  @JsonProperty("wxid")
+  private String wxid;
 }
