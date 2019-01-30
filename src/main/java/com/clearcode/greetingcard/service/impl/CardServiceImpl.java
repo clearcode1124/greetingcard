@@ -14,6 +14,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.clearcode.greetingcard.domain.Contact;
@@ -22,6 +23,7 @@ import com.clearcode.greetingcard.qiniu.service.QiNiuService;
 import com.clearcode.greetingcard.service.CardService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qiniu.util.StringUtils;
 
 import lombok.extern.slf4j.Slf4j;
 import net.lingala.zip4j.core.ZipFile;
@@ -32,9 +34,25 @@ import net.lingala.zip4j.model.ZipParameters;
 @Slf4j
 public class CardServiceImpl implements CardService {
 
-  public static final String HK_IMAGES_PATH = "src/main/resources/static/hks";
+  public static final String DIAGONAL = "/";
 
-  public static final String HK_IMAGES_ZIP_PATH = "src/main/resources/static/";
+  @Value("${hk.img.images-path}")
+  private String imagesPath;
+
+  @Value("${hk.img.images-zip-path}")
+  private String imagesZipPath;
+
+  @Value("${hk.res.img-templete-path}")
+  private String imgTempletePath;
+
+  @Value("${hk.res.contact-path}")
+  private String contactPath;
+
+  @Value("${hk.res.greeting-path}")
+  private String greetingPath;
+
+  @Value("${hk.res.ttf-path}")
+  private String ttfPath;
 
   @Autowired
   private QiNiuService qiNiuService;
@@ -47,24 +65,23 @@ public class CardServiceImpl implements CardService {
       List<Greeting> greetings = getGreetings();
       int index = 0;
       for (Contact contact : contacts) {
-        if (index == 5) {
-          break;
-        }
         if (index >= greetings.size()) {
           index = 0;
         }
         editImage(contact.getRemarkName(), greetings.get(index).getMessage());
         index++;
       }
-      File srcFile = new File(HK_IMAGES_PATH);
+      File srcFile = new File(imagesPath);
       File[] files = srcFile.listFiles();
       ArrayList filesToAdd = new ArrayList(Arrays.asList(files));
       ZipParameters parameters = new ZipParameters();
       String hkImagesZipName = System.currentTimeMillis() + ".zip";
-      String hkImagesZipPath = HK_IMAGES_ZIP_PATH + hkImagesZipName;
+      String hkImagesZipPath = imagesZipPath + DIAGONAL + hkImagesZipName;
       ZipFile zipFile = new ZipFile(hkImagesZipPath);
       zipFile.addFiles(filesToAdd, parameters);
       qiNiuService.upload(new File(hkImagesZipPath), hkImagesZipName);
+      deleteDir(imagesPath);
+      deleteDir(hkImagesZipPath);
     } catch (IOException | FontFormatException | ZipException e) {
       log.error("生成贺卡失败:{}", e);
       return "fail";
@@ -77,8 +94,10 @@ public class CardServiceImpl implements CardService {
     try {
       editImage(name, message);
       String imageName = String.format("hk1-%s.png", name);
-      qiNiuService.upload(new File("src/main/resources/static/hks/" + imageName), imageName);
+      qiNiuService.upload(new File(imagesPath + DIAGONAL + imageName), imageName);
+      deleteDir(imagesPath);
     } catch (IOException | FontFormatException e) {
+      log.error("生成贺卡失败:{}", e);
       return "fail";
     }
     return "success";
@@ -87,8 +106,7 @@ public class CardServiceImpl implements CardService {
   public List<Contact> getContacts() {
     try {
       ObjectMapper objectMapper = new ObjectMapper();
-      return objectMapper.readValue(new File("src/main/resources/static/contact.json"),
-          new TypeReference<List<Contact>>() {});
+      return objectMapper.readValue(new File(contactPath), new TypeReference<List<Contact>>() {});
     } catch (IOException e) {
       return new ArrayList<>();
     }
@@ -97,23 +115,24 @@ public class CardServiceImpl implements CardService {
   public List<Greeting> getGreetings() {
     ObjectMapper objectMapper = new ObjectMapper();
     try {
-      return objectMapper.readValue(new File("src/main/resources/static/greetings.json"),
-          new TypeReference<List<Greeting>>() {});
+      return objectMapper.readValue(new File(greetingPath), new TypeReference<List<Greeting>>() {});
     } catch (IOException e) {
       return new ArrayList<>();
     }
   }
 
   public void editImage(String name, String message) throws IOException, FontFormatException {
-    BufferedImage image = ImageIO.read(new File("src/main/resources/static/hk1.png"));
+    BufferedImage image = ImageIO.read(new File(imgTempletePath));
     Graphics graphics = image.getGraphics();
     graphics.setColor(Color.BLACK);
-    graphics
-        .setFont(Font.createFont(Font.TRUETYPE_FONT, new File("src/main/resources/static/1.ttf"))
-            .deriveFont(120f));
+    graphics.setFont(Font.createFont(Font.TRUETYPE_FONT, new File(ttfPath)).deriveFont(120f));
     int startX = 750;
     int nextX = 910;
-    graphics.drawString(name + "：", 150, startX);
+    String username = name;
+    if (!StringUtils.isNullOrEmpty(name)) {
+      username = name.replaceAll("\\d+", "");
+    }
+    graphics.drawString(username + "：", 150, startX);
     int length = message.length();
     int index = 0;
     for (int i = 0; i <= (length + 2) / 11; i++) {
@@ -134,7 +153,29 @@ public class CardServiceImpl implements CardService {
       }
     }
     graphics.dispose();
-    ImageIO.write(image, "png",
-        new File(String.format("src/main/resources/static/hks/hk1-%s.png", name)));
+    String genImgPath = imagesPath + DIAGONAL + "hk1-%s.png";
+    ImageIO.write(image, "png", new File(String.format(genImgPath, name)));
+  }
+
+  public boolean deleteDir(String path) {
+    File file = new File(path);
+    if (!file.exists()) {// 判断是否待删除目录是否存在
+      return false;
+    }
+    if (!file.isDirectory()) {
+      return file.delete();
+    }
+    String[] content = file.list();// 取得当前目录下所有文件和文件夹
+    for (String name : content) {
+      File temp = new File(path, name);
+      if (temp.isDirectory()) {
+        deleteDir(temp.getAbsolutePath());// 递归调用，删除目录里的内容
+      } else {
+        if (temp.delete()) {
+          continue;
+        }
+      }
+    }
+    return true;
   }
 }

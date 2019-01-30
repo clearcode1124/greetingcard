@@ -1,5 +1,18 @@
+server:
+  port: 8180
+  context-path: /
 qi-niu:
   access-key: w3RjkYsJN-aUVMVqZCQxV9ovpXWWRaST3M-IZ2J6
   secret-key: hhPXkdFArGE1sQMTG9TYDI8_HzctrplkSuJ3ZmjN
   buc-key: heka
   domain-name: http://hk.clearcode.top
+hk:
+  img:
+    images-path: src/main/resources/static/hks
+    images-zip-path: src/main/resources/static
+  res:
+    img-templete-path: src/main/resources/static/hk1.png
+    contact-path: src/main/resources/static/contact.json
+    greeting-path: src/main/resources/static/greetings.json
+    ttf-path: src/main/resources/static/1.ttf
+  
